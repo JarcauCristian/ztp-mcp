@@ -18,9 +18,11 @@ const NUMBER_PATTERN = "^[0-9]+$"
 type VMHosts struct{}
 
 func (VMHosts) RegisterTools(mcpServer *server.MCPServer) {
-	mcpServer.AddTool(ListVMHosts{}.Create(), ListVMHosts{}.Handle)
-	mcpServer.AddTool(ListVMHost{}.Create(), ListVMHost{}.Handle)
-	mcpServer.AddTool(ComposeVMHost{}.Create(), ComposeVMHost{}.Handle)
+	mcpTools := []MCPTool{ListVMHosts{}, ListVMHost{}, ComposeVM{}}
+
+	for _, tool := range mcpTools {
+		mcpServer.AddTool(tool.Create(), tool.Handle)
+	}
 }
 
 type ListVMHosts struct{}
@@ -95,9 +97,9 @@ func (ListVMHost) Handle(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	return mcp.NewToolResultText(string(jsonData)), nil
 }
 
-type ComposeVMHost struct{}
+type ComposeVM struct{}
 
-func (ComposeVMHost) Create() mcp.Tool {
+func (ComposeVM) Create() mcp.Tool {
 	return mcp.NewTool(
 		"compose_vm_host",
 		mcp.WithString(
@@ -134,7 +136,7 @@ func (ComposeVMHost) Create() mcp.Tool {
 	)
 }
 
-func (ComposeVMHost) Handle(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (ComposeVM) Handle(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	vmHostID, err := request.RequireString("id")
 	if err != nil {
 		return nil, err
