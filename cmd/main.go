@@ -7,12 +7,21 @@ import (
 
 	"github.com/JarcauCristian/ztp-mcp/internal/server/tools"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/mark3labs/mcp-go/server"
 )
 
 func init() {
-	zap.ReplaceGlobals(zap.Must(zap.NewProduction()))
+	var logger *zap.Logger
+
+	config := zap.NewDevelopmentConfig()
+	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	config.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("15:04:05")
+	config.EncoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
+	logger = zap.Must(config.Build())
+
+	zap.ReplaceGlobals(logger)
 }
 
 func main() {
@@ -26,6 +35,7 @@ func main() {
 
 	tools.VMHosts{}.RegisterTools(mcpServer)
 	tools.Machines{}.RegisterTools(mcpServer)
+	tools.Power{}.RegisterTools(mcpServer)
 
 	transport := os.Getenv("MCP_TRANSPORT")
 	addr := os.Getenv("MCP_ADDRESS")

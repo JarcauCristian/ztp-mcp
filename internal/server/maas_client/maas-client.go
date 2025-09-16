@@ -49,12 +49,6 @@ func generateNonce() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-type MAASResponse struct {
-	Body       string
-	StatusCode int
-	Headers    http.Header
-}
-
 type MAASClient struct {
 	baseURL     string
 	consumerKey string
@@ -83,19 +77,19 @@ func NewMAASClientFromEnv() (*MAASClient, error) {
 	}, nil
 }
 
-func (c *MAASClient) Get(ctx context.Context, path string) (MAASResponse, error) {
+func (c *MAASClient) Get(ctx context.Context, path string) (string, error) {
 	fullURL := fmt.Sprintf("%s%s", c.baseURL, path)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", fullURL, nil)
 	if err != nil {
-		return MAASResponse{}, fmt.Errorf("failed to create request: %w", err)
+		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 
 	nonce, err := generateNonce()
 	if err != nil {
-		return MAASResponse{}, err
+		return "", err
 	}
 
 	signature := "&" + url.QueryEscape(c.secret)
@@ -114,27 +108,23 @@ func (c *MAASClient) Get(ctx context.Context, path string) (MAASResponse, error)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return MAASResponse{}, fmt.Errorf("MAAS API error: %w", err)
+		return "", fmt.Errorf("MAAS API error: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return MAASResponse{}, fmt.Errorf("failed to read the response: %w", err)
+		return "", fmt.Errorf("failed to read the response: %w", err)
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return MAASResponse{}, fmt.Errorf("MAAS API returned status %d: %s", resp.StatusCode, string(body))
+		return "", fmt.Errorf("MAAS API returned status %d: %s", resp.StatusCode, string(body))
 	}
 
-	return MAASResponse{
-		Body:       string(body),
-		StatusCode: resp.StatusCode,
-		Headers:    resp.Header,
-	}, nil
+	return string(body), nil
 }
 
-func (c *MAASClient) Post(ctx context.Context, path string, body io.Reader) (MAASResponse, error) {
+func (c *MAASClient) Post(ctx context.Context, path string, body io.Reader) (string, error) {
 	fullURL := fmt.Sprintf("%s%s", c.baseURL, path)
 
 	timeoutContext, cancel := context.WithTimeout(ctx, 60*time.Second)
@@ -142,14 +132,14 @@ func (c *MAASClient) Post(ctx context.Context, path string, body io.Reader) (MAA
 
 	req, err := http.NewRequestWithContext(timeoutContext, "POST", fullURL, body)
 	if err != nil {
-		return MAASResponse{}, fmt.Errorf("failed to create request: %w", err)
+		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 
 	nonce, err := generateNonce()
 	if err != nil {
-		return MAASResponse{}, err
+		return "", err
 	}
 
 	signature := "&" + url.QueryEscape(c.secret)
@@ -169,22 +159,18 @@ func (c *MAASClient) Post(ctx context.Context, path string, body io.Reader) (MAA
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return MAASResponse{}, fmt.Errorf("MAAS API error: %w", err)
+		return "", fmt.Errorf("MAAS API error: %w", err)
 	}
 	defer resp.Body.Close()
 
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return MAASResponse{}, fmt.Errorf("failed to read the response: %w", err)
+		return "", fmt.Errorf("failed to read the response: %w", err)
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return MAASResponse{}, fmt.Errorf("MAAS API returned status %d: %s", resp.StatusCode, string(responseBody))
+		return "", fmt.Errorf("MAAS API returned status %d: %s", resp.StatusCode, string(responseBody))
 	}
 
-	return MAASResponse{
-		Body:       string(responseBody),
-		StatusCode: resp.StatusCode,
-		Headers:    resp.Header,
-	}, nil
+	return string(responseBody), nil
 }

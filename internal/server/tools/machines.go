@@ -74,14 +74,42 @@ func (ListMachines) Handle(ctx context.Context, request mcp.CallToolRequest) (*m
 		return nil, err
 	}
 
-	jsonData, err := json.Marshal(resultData)
+	var machines []map[string]any
+
+	err = json.Unmarshal([]byte(resultData), &machines)
 	if err != nil {
-		errMsg := fmt.Sprintf("failed to marshal result: %v", err)
+		errMsg := fmt.Sprintf("Failed to unmarshal the result err=%v", err)
 		zap.L().Error(errMsg)
 		return mcp.NewToolResultError(errMsg), nil
 	}
 
-	return mcp.NewToolResultText(string(jsonData)), nil
+	// Filter out machines with the "protected" tag
+	var filteredMachines []map[string]any
+	for _, machine := range machines {
+		if tagNames, ok := machine["tag_names"].([]any); ok {
+			hasProtected := false
+			for _, tag := range tagNames {
+				if tagStr, ok := tag.(string); ok && tagStr == "protected" {
+					hasProtected = true
+					break
+				}
+			}
+			if !hasProtected {
+				filteredMachines = append(filteredMachines, machine)
+			}
+		} else {
+			filteredMachines = append(filteredMachines, machine)
+		}
+	}
+
+	response, err := json.Marshal(filteredMachines)
+	if err != nil {
+		errMsg := fmt.Sprintf("Failed to marshal filtered machines: %v", err)
+		zap.L().Error(errMsg)
+		return mcp.NewToolResultError(errMsg), nil
+	}
+
+	return mcp.NewToolResultText(string(response)), nil
 }
 
 type ListMachine struct{}
