@@ -13,7 +13,7 @@ import (
 
 type Power struct{}
 
-func (Power) RegisterTools(mcpServer *server.MCPServer) {
+func (Power) Register(mcpServer *server.MCPServer) {
 	mcpTools := []MCPTool{PowerState{}, ChangePowerState{}}
 
 	for _, tool := range mcpTools {

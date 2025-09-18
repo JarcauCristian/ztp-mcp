@@ -17,7 +17,7 @@ const NUMBER_PATTERN = "^[0-9]+$"
 
 type VMHosts struct{}
 
-func (VMHosts) RegisterTools(mcpServer *server.MCPServer) {
+func (VMHosts) Register(mcpServer *server.MCPServer) {
 	mcpTools := []MCPTool{ListVMHosts{}, ListVMHost{}, ComposeVM{}}
 
 	for _, tool := range mcpTools {

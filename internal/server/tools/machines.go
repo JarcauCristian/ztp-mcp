@@ -15,7 +15,7 @@ import (
 
 type Machines struct{}
 
-func (Machines) RegisterTools(mcpServer *server.MCPServer) {
+func (Machines) Register(mcpServer *server.MCPServer) {
 	mcpTools := []MCPTool{ListMachines{}, ListMachine{}, CommissionMachine{}}
 
 	for _, tool := range mcpTools {

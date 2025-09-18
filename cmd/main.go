@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/JarcauCristian/ztp-mcp/internal/server/registry"
 	"github.com/JarcauCristian/ztp-mcp/internal/server/tools"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -24,6 +25,14 @@ func init() {
 	zap.ReplaceGlobals(logger)
 }
 
+func registerTools(mcpServer *server.MCPServer) {
+	registries := []registry.Registry{tools.VMHosts{}, tools.Machines{}, tools.Power{}}
+
+	for _, reg := range registries {
+		reg.Register(mcpServer)
+	}
+}
+
 func main() {
 	mcpServer := server.NewMCPServer(
 		"Zero-Touch Provisioning MPC Server",
@@ -33,9 +42,7 @@ func main() {
 		server.WithResourceCapabilities(true, true),
 	)
 
-	tools.VMHosts{}.RegisterTools(mcpServer)
-	tools.Machines{}.RegisterTools(mcpServer)
-	tools.Power{}.RegisterTools(mcpServer)
+	registerTools(mcpServer)
 
 	transport := os.Getenv("MCP_TRANSPORT")
 	addr := os.Getenv("MCP_ADDRESS")
