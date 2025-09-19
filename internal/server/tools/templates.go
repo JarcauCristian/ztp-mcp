@@ -14,7 +14,7 @@ import (
 type Templates struct{}
 
 func (Templates) Register(mcpServer *server.MCPServer) {
-	mcpTools := []MCPTool{RetrieveTemplates{}}
+	mcpTools := []MCPTool{RetrieveTemplates{}, RetrieveTemplateContents{}, RetrieveTemplateById{}}
 
 	for _, tool := range mcpTools {
 		mcpServer.AddTool(tool.Create(), tool.Handle)
@@ -26,23 +26,128 @@ type RetrieveTemplates struct{}
 func (RetrieveTemplates) Create() mcp.Tool {
 	return mcp.NewTool(
 		"retrieve_templates",
+		mcp.WithBoolean(
+			"only_ids",
+			mcp.DefaultBool(false),
+			mcp.Description("If true return only the ids of the templates."),
+		),
 		mcp.WithDescription("Retruns all deployment Cloud-Init templates that are available on the system."),
 	)
 }
 
 func (RetrieveTemplates) Handle(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	descriptions, err := templates.Templates()
+	var jsonData []byte
+	var errMsg string
+	onlyIDs := request.GetBool("only_ids", false)
+
+	if onlyIDs {
+		zap.L().Info("[RetrieveTemplates] Retrieving all template descriptions...")
+		descriptions, err := templates.Templates()
+		if err != nil {
+			errMsg = fmt.Sprintf("Failed to retrieve all the template descriptions: %v", err)
+			zap.L().Error(fmt.Sprintf("[RetrieveTemplates] %s", errMsg))
+			return mcp.NewToolResultError(errMsg), nil
+		}
+
+		jsonData, err = json.Marshal(descriptions)
+		if err != nil {
+			errMsg = fmt.Sprintf("failed to marshal result: %v", err)
+			zap.L().Error(fmt.Sprintf("[RetrieveTemplates] %s", errMsg))
+			return mcp.NewToolResultError(errMsg), nil
+		}
+	} else {
+		zap.L().Info("[RetrieveTemplates] Retrieving all template IDs...")
+		templateIDs, err := templates.TemplateIDs()
+		if err != nil {
+			errMsg = fmt.Sprintf("Failed to retrieve all the template ids: %v", err)
+			zap.L().Error(fmt.Sprintf("[RetrieveTemplates] %s", errMsg))
+			return mcp.NewToolResultError(errMsg), nil
+		}
+
+		jsonData, err = json.Marshal(templateIDs)
+		if err != nil {
+			errMsg = fmt.Sprintf("failed to marshal result: %v", err)
+			zap.L().Error(fmt.Sprintf("[RetrieveTemplates] %s", errMsg))
+			return mcp.NewToolResultError(errMsg), nil
+		}
+	}
+
+	return mcp.NewToolResultText(string(jsonData)), nil
+}
+
+type RetrieveTemplateById struct{}
+
+func (RetrieveTemplateById) Create() mcp.Tool {
+	return mcp.NewTool(
+		"retrieve_template_by_id",
+		mcp.WithString(
+			"id",
+			mcp.Required(),
+			mcp.Pattern("^[a-z0-9_-]*$"),
+			mcp.Description("The id of the template to retrieve."),
+		),
+		mcp.WithDescription("Return the information about a particular template specified by ID."),
+	)
+}
+
+func (RetrieveTemplateById) Handle(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var errMsg string
+
+	templateId, err := request.RequireString("id")
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("Failed to retrieve the all the machines: %v", err))
-		return nil, err
+		zap.L().Error(fmt.Sprintf("[RetrieveTemplateById] Required parameter id not present err=%v", err))
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	zap.L().Info(fmt.Sprintf("[RetrieveTemplateById] Retrieving template with id %s...", templateId))
+	descriptions, err := templates.Template(templateId)
+	if err != nil {
+		errMsg = fmt.Sprintf("Failed to retrieve description for template with id %s: %v", templateId, err)
+		zap.L().Error(fmt.Sprintf("[RetrieveTemplateById] %s", errMsg))
+		return mcp.NewToolResultError(errMsg), nil
 	}
 
 	jsonData, err := json.Marshal(descriptions)
 	if err != nil {
-		errMsg := fmt.Sprintf("failed to marshal result: %v", err)
-		zap.L().Error(errMsg)
+		errMsg = fmt.Sprintf("failed to marshal result: %v", err)
+		zap.L().Error(fmt.Sprintf("[RetrieveTemplateById] %s", errMsg))
 		return mcp.NewToolResultError(errMsg), nil
 	}
 
 	return mcp.NewToolResultText(string(jsonData)), nil
+}
+
+type RetrieveTemplateContents struct{}
+
+func (RetrieveTemplateContents) Create() mcp.Tool {
+	return mcp.NewTool(
+		"retrieve_template_content",
+		mcp.WithString(
+			"id",
+			mcp.Required(),
+			mcp.Pattern("^[a-z0-9_-]*$"),
+			mcp.Description("The id of the template to retrieve the contents for."),
+		),
+		mcp.WithDescription("Return contents of a particular template specified by ID."),
+	)
+}
+
+func (RetrieveTemplateContents) Handle(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var errMsg string
+
+	templateId, err := request.RequireString("id")
+	if err != nil {
+		zap.L().Error(fmt.Sprintf("[RetrieveTemplateContents] Required parameter id not present err=%v", err))
+		return mcp.NewToolResultError(err.Error()), nil
+	}
+
+	zap.L().Info(fmt.Sprintf("[RetrieveTemplateContents] Retrieving template content for id %s...", templateId))
+	templateContnet, err := templates.TemplateContent(templateId)
+	if err != nil {
+		errMsg = fmt.Sprintf("Failed to retrieve template content for id %s: %v", templateId, err)
+		zap.L().Error(fmt.Sprintf("[RetrieveTemplateContents] %s", errMsg))
+		return mcp.NewToolResultError(errMsg), nil
+	}
+
+	return mcp.NewToolResultText(templateContnet), nil
 }

@@ -26,7 +26,7 @@ func init() {
 }
 
 func registerTools(mcpServer *server.MCPServer) {
-	registries := []registry.Registry{tools.VMHosts{}, tools.Machines{}, tools.Power{}}
+	registries := []registry.Registry{tools.VMHosts{}, tools.Machines{}, tools.Power{}, tools.Templates{}}
 
 	for _, reg := range registries {
 		reg.Register(mcpServer)

@@ -37,26 +37,30 @@ func (PowerState) Create() mcp.Tool {
 }
 
 func (PowerState) Handle(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var errMsg string
+
 	machineID, err := request.RequireString("id")
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("Required parameter id not present err=%v", err))
+		zap.L().Error(fmt.Sprintf("[PowerState] Required parameter id not present err=%v", err))
+		return mcp.NewToolResultError(err.Error()), nil
 	}
 
 	path := fmt.Sprintf("/MAAS/api/2.0/machines/%s/op-query_power_state", machineID)
 
 	client := maas_client.MustClient()
 
-	zap.L().Info(fmt.Sprintf("Retrieving power state for machine with id %s...", machineID))
+	zap.L().Info(fmt.Sprintf("[PowerState] Retrieving power state for machine with id %s...", machineID))
 	resultData, err := client.Get(ctx, path)
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("Failed to retrieve power state for machine with id %s err=%v", machineID, err))
-		return nil, err
+		errMsg = fmt.Sprintf("Failed to retrieve power state for machine with id %s err=%v", machineID, err)
+		zap.L().Error(fmt.Sprintf("[PowerState] %s", errMsg))
+		return mcp.NewToolResultError(errMsg), nil
 	}
 
 	jsonData, err := json.Marshal(resultData)
 	if err != nil {
-		errMsg := fmt.Sprintf("failed to marshal result: %v", err)
-		zap.L().Error(errMsg)
+		errMsg = fmt.Sprintf("failed to marshal result: %v", err)
+		zap.L().Error(fmt.Sprintf("[PowerState] %s", errMsg))
 		return mcp.NewToolResultError(errMsg), nil
 	}
 
@@ -84,14 +88,18 @@ func (ChangePowerState) Create() mcp.Tool {
 }
 
 func (ChangePowerState) Handle(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var errMsg string
+
 	machineID, err := request.RequireString("id")
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("Required parameter id not present err=%v", err))
+		zap.L().Error(fmt.Sprintf("[ChangePowerState] Required parameter id not present err=%v", err))
+		return mcp.NewToolResultError(err.Error()), nil
 	}
 
 	state, err := request.RequireBool("state")
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("Required parameter state not present err=%v", err))
+		zap.L().Error(fmt.Sprintf("[ChangePowerState] Required parameter state not present err=%v", err))
+		return mcp.NewToolResultError(err.Error()), nil
 	}
 
 	var path string
@@ -110,17 +118,18 @@ func (ChangePowerState) Handle(ctx context.Context, request mcp.CallToolRequest)
 		powerName = "off"
 	}
 
-	zap.L().Info(fmt.Sprintf("Power machine with id %s %s...", machineID, powerName))
+	zap.L().Info(fmt.Sprintf("[ChangePowerState] Power machine with id %s %s...", machineID, powerName))
 	resultData, err := client.Get(ctx, path)
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("Failed to power %s machine with id %s err=%v", powerName, machineID, err))
-		return nil, err
+		errMsg = fmt.Sprintf("Failed to power %s machine with id %s err=%v", powerName, machineID, err)
+		zap.L().Error(fmt.Sprintf("[ChangePowerState] %s", errMsg))
+		return mcp.NewToolResultError(errMsg), nil
 	}
 
 	jsonData, err := json.Marshal(resultData)
 	if err != nil {
-		errMsg := fmt.Sprintf("failed to marshal result: %v", err)
-		zap.L().Error(errMsg)
+		errMsg = fmt.Sprintf("failed to marshal result: %v", err)
+		zap.L().Error(fmt.Sprintf("[ChangePowerState] %s", errMsg))
 		return mcp.NewToolResultError(errMsg), nil
 	}
 

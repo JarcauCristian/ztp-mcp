@@ -35,21 +35,24 @@ func (ListVMHosts) Create() mcp.Tool {
 }
 
 func (ListVMHosts) Handle(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var errMsg string
+
 	path := "/MAAS/api/2.0/vm-hosts/"
 
 	client := maas_client.MustClient()
 
-	zap.L().Info("Retrieving all VM hosts...")
+	zap.L().Info("[ListVMHosts] Retrieving all VM hosts...")
 	resultData, err := client.Get(ctx, path)
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("Failed to retrieve the VM hosts: %v", err))
-		return nil, err
+		errMsg = fmt.Sprintf("Failed to retrieve the VM hosts: %v", err)
+		zap.L().Error(fmt.Sprintf("[ListVMHosts] %s", errMsg))
+		return mcp.NewToolResultError(errMsg), nil
 	}
 
 	jsonData, err := json.Marshal(resultData)
 	if err != nil {
-		errMsg := fmt.Sprintf("failed to marshal result: %v", err)
-		zap.L().Error(errMsg)
+		errMsg = fmt.Sprintf("failed to marshal result: %v", err)
+		zap.L().Error(fmt.Sprintf("[ListVMHosts] %s", errMsg))
 		return mcp.NewToolResultError(errMsg), nil
 	}
 
@@ -72,26 +75,31 @@ func (ListVMHost) Create() mcp.Tool {
 }
 
 func (ListVMHost) Handle(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var errMsg string
+
 	vmID, err := request.RequireString("id")
 	if err != nil {
-		return nil, err
+		zap.L().Error(fmt.Sprintf("[ListVMHost] Required parameter id not present err=%v", err))
+		return mcp.NewToolResultError(err.Error()), nil
 	}
 
 	path := fmt.Sprintf("/MAAS/api/2.0/vm-hosts/%s/", vmID)
 
 	client := maas_client.MustClient()
 
-	zap.L().Info(fmt.Sprintf("Retrieving VM host with ID %s...", vmID))
+	zap.L().Info(fmt.Sprintf("[ListVMHost] Retrieving VM host with ID %s...", vmID))
 	resultData, err := client.Get(ctx, path)
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("Failed to retreive VM host with ID %s, err=%v", vmID, err))
-		return nil, err
+		errMsg = fmt.Sprintf("Failed to retreive VM host with ID %s, err=%v", vmID, err)
+		zap.L().Error(fmt.Sprintf("[ListVMHost] %s", errMsg))
+		return mcp.NewToolResultError(errMsg), nil
 	}
 
 	jsonData, err := json.Marshal(resultData)
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("failed to marshal result: %v", err))
-		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal result: %v", err)), nil
+		errMsg = fmt.Sprintf("failed to marshal result: %v", err)
+		zap.L().Error(fmt.Sprintf("[ListVMHost] %s", errMsg))
+		return mcp.NewToolResultError(errMsg), nil
 	}
 
 	return mcp.NewToolResultText(string(jsonData)), nil
@@ -137,29 +145,36 @@ func (ComposeVM) Create() mcp.Tool {
 }
 
 func (ComposeVM) Handle(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	var errMsg string
+
 	vmHostID, err := request.RequireString("id")
 	if err != nil {
-		return nil, err
+		zap.L().Error(fmt.Sprintf("[ComposeVM] Required parameter id not present err=%v", err))
+		return mcp.NewToolResultError(err.Error()), nil
 	}
 
 	cores, err := request.RequireString("cores")
 	if err != nil {
-		return nil, err
+		zap.L().Error(fmt.Sprintf("[ComposeVM] Required parameter cores not present err=%v", err))
+		return mcp.NewToolResultError(err.Error()), nil
 	}
 
 	memory, err := request.RequireString("memory")
 	if err != nil {
-		return nil, err
+		zap.L().Error(fmt.Sprintf("[ComposeVM] Required parameter memory not present err=%v", err))
+		return mcp.NewToolResultError(err.Error()), nil
 	}
 
 	storage, err := request.RequireString("storage")
 	if err != nil {
-		return nil, err
+		zap.L().Error(fmt.Sprintf("[ComposeVM] Required parameter storage not present err=%v", err))
+		return mcp.NewToolResultError(err.Error()), nil
 	}
 
 	hostname, err := request.RequireString("hostname")
 	if err != nil {
-		return nil, err
+		zap.L().Error(fmt.Sprintf("[ComposeVM] Required parameter hostname not present err=%v", err))
+		return mcp.NewToolResultError(err.Error()), nil
 	}
 
 	form := make(url.Values)
@@ -172,17 +187,19 @@ func (ComposeVM) Handle(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 
 	client := maas_client.MustClient()
 
-	zap.L().Info(fmt.Sprintf("Composing VM on host %s with the following configuration:\nCores: %s\nMemory: %s\nStorage: %s\nHostname: %s", vmHostID, cores, memory, storage, hostname))
+	zap.L().Info(fmt.Sprintf("[ComposeVM] Composing VM on host %s with the following configuration:\nCores: %s\nMemory: %s\nStorage: %s\nHostname: %s", vmHostID, cores, memory, storage, hostname))
 	resultData, err := client.Post(ctx, path, strings.NewReader(form.Encode()))
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("Failed to compose VM err=%v", err))
-		return nil, err
+		errMsg = fmt.Sprintf("Failed to compose VM err=%v", err)
+		zap.L().Error(fmt.Sprintf("[ComposeVM] %s", errMsg))
+		return mcp.NewToolResultError(errMsg), nil
 	}
 
 	jsonData, err := json.Marshal(resultData)
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("failed to marshal result: %v", err))
-		return mcp.NewToolResultError(fmt.Sprintf("failed to marshal result: %v", err)), nil
+		errMsg = fmt.Sprintf("failed to marshal result: %v", err)
+		zap.L().Error(fmt.Sprintf("[ComposeVM] %s", errMsg))
+		return mcp.NewToolResultError(errMsg), nil
 	}
 
 	return mcp.NewToolResultText(string(jsonData)), nil

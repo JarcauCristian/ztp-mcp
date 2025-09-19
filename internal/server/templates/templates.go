@@ -24,7 +24,7 @@ func Templates() ([]Description, error) {
 		return nil, fmt.Errorf("Error getting working directory.")
 	}
 
-	templatesDir := filepath.Join(currentDir, "templates")
+	templatesDir := filepath.Join(currentDir, "internal/server/templates")
 
 	entries, err := os.ReadDir(templatesDir)
 	if err != nil {
@@ -68,7 +68,7 @@ func Template(templateId string) (Description, error) {
 		return Description{}, fmt.Errorf("Error getting working directory.")
 	}
 
-	templatesDir := filepath.Join(currentDir, "templates")
+	templatesDir := filepath.Join(currentDir, "internal/server/templates")
 
 	descriptionPath := filepath.Join(templatesDir, templateId, "description.json")
 
@@ -100,7 +100,7 @@ func TemplateIDs() ([]string, error) {
 		return nil, fmt.Errorf("Error getting working directory.")
 	}
 
-	templatesDir := filepath.Join(currentDir, "templates")
+	templatesDir := filepath.Join(currentDir, "internal/server/templates")
 
 	entries, err := os.ReadDir(templatesDir)
 	if err != nil {
@@ -135,4 +135,27 @@ func TemplateIDs() ([]string, error) {
 	}
 
 	return ids, nil
+}
+
+func TemplateContent(templateId string) (string, error) {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("Error getting working directory.")
+	}
+
+	templatesDir := filepath.Join(currentDir, "internal/server/templates")
+
+	templateContentPath := filepath.Join(templatesDir, templateId, "template.yaml")
+
+	if _, err := os.Stat(templateContentPath); os.IsNotExist(err) {
+		return "", err
+	}
+
+	templateContentData, err := os.ReadFile(templateContentPath)
+	if err != nil {
+		zap.L().Error(fmt.Sprintf("Error reading %s: %v\n", templateContentPath, err))
+		return "", err
+	}
+
+	return string(templateContentData), nil
 }
