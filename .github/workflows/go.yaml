@@ -1,0 +1,332 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: ['*']
+    tags: ['v*']
+  pull_request:
+    branches: ['main', 'master']
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  cleanup:
+    name: Code Cleanup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.3'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Run go fmt
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "The following files are not formatted:"
+            gofmt -s -l .
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run staticcheck
+        uses: dominikh/staticcheck-action@v1.3.0
+        with:
+          version: "2023.1.7"
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: cleanup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.3'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.out
+          flags: unittests
+          name: codecov-umbrella
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: cleanup
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.3'
+          cache: true
+
+      - name: Run Gosec Security Scanner
+        uses: securecodewarrior/github-action-gosec@master
+        with:
+          args: './...'
+
+  build-and-release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    needs: [cleanup, test, security]
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      matrix:
+        include:
+          - goos: windows
+            goarch: amd64
+            ext: .exe
+            name: windows-amd64
+          - goos: windows
+            goarch: arm64
+            ext: .exe
+            name: windows-arm64
+          - goos: linux
+            goarch: amd64
+            ext: ""
+            name: linux-amd64
+          - goos: linux
+            goarch: arm64
+            ext: ""
+            name: linux-arm64
+          - goos: darwin
+            goarch: amd64
+            ext: ""
+            name: darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            ext: ""
+            name: darwin-arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.3'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          go build -ldflags="-s -w -X main.version=${{ steps.version.outputs.VERSION }}" \
+            -o "ztp-mcp-${{ matrix.name }}${{ matrix.ext }}" \
+            ./cmd/main.go
+
+      - name: Create package archive
+        run: |
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            zip "ztp-mcp-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.zip" \
+              "ztp-mcp-${{ matrix.name }}${{ matrix.ext }}" \
+              README.md \
+              LICENSE
+          else
+            tar -czf "ztp-mcp-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.tar.gz" \
+              "ztp-mcp-${{ matrix.name }}${{ matrix.ext }}" \
+              README.md \
+              LICENSE
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ztp-mcp-${{ matrix.name }}
+          path: |
+            ztp-mcp-${{ steps.version.outputs.VERSION }}-${{ matrix.name }}.*
+
+  publish-packages:
+    name: Publish Packages
+    runs-on: ubuntu-latest
+    needs: build-and-release
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          release_name: Release ${{ steps.version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          body: |
+            ## Zero-Touch Provisioning MCP Server ${{ steps.version.outputs.VERSION }}
+            
+            ### Downloads
+            
+            Choose the appropriate package for your platform:
+            
+            - **Windows (x64)**: `ztp-mcp-${{ steps.version.outputs.VERSION }}-windows-amd64.zip`
+            - **Windows (ARM64)**: `ztp-mcp-${{ steps.version.outputs.VERSION }}-windows-arm64.zip`
+            - **Linux (x64)**: `ztp-mcp-${{ steps.version.outputs.VERSION }}-linux-amd64.tar.gz`
+            - **Linux (ARM64)**: `ztp-mcp-${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz`
+            - **macOS (Intel)**: `ztp-mcp-${{ steps.version.outputs.VERSION }}-darwin-amd64.tar.gz`
+            - **macOS (Apple Silicon)**: `ztp-mcp-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz`
+            
+            ### Installation
+            
+            1. Download the appropriate package for your platform
+            2. Extract the archive
+            3. Set up your environment variables:
+               ```bash
+               export MAAS_BASE_URL="https://your-maas-server.com"
+               export MAAS_API_KEY="consumer_key:token:secret"
+               ```
+            4. Run the binary: `./ztp-mcp` (or `ztp-mcp.exe` on Windows)
+            
+            ### What's New
+            
+            - See [CHANGELOG.md](CHANGELOG.md) for detailed changes
+
+      - name: Upload Release Assets
+        run: |
+          for dir in ./artifacts/*/; do
+            for file in "$dir"*; do
+              if [[ -f "$file" ]]; then
+                echo "Uploading $file"
+                gh release upload "${{ steps.version.outputs.VERSION }}" "$file"
+              fi
+            done
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-container:
+    name: Build and Push Container
+    runs-on: ubuntu-latest
+    needs: [cleanup, test, security]
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+
+      - name: Create Dockerfile
+        run: |
+          cat > Dockerfile << 'EOF'
+          FROM golang:1.23.3-alpine AS builder
+          
+          WORKDIR /app
+          COPY go.mod go.sum ./
+          RUN go mod download
+          
+          COPY . .
+          RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o ztp-mcp ./cmd/main.go
+          
+          FROM alpine:3.19
+          RUN apk --no-cache add ca-certificates tzdata
+          WORKDIR /root/
+          
+          COPY --from=builder /app/ztp-mcp .
+          COPY --from=builder /app/internal/server/templates ./internal/server/templates
+          
+          EXPOSE 8080
+          
+          ENTRYPOINT ["./ztp-mcp"]
+          EOF
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs: [publish-packages, publish-container]
+    if: always() && startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Notify success
+        if: needs.publish-packages.result == 'success' && needs.publish-container.result == 'success'
+        run: |
+          echo "✅ Release ${{ github.ref_name }} published successfully!"
+          echo "📦 Packages available at: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}"
+          echo "🐳 Container available at: ghcr.io/${{ github.repository }}:${{ github.ref_name }}"
+
+      - name: Notify failure
+        if: needs.publish-packages.result == 'failure' || needs.publish-container.result == 'failure'
+        run: |
+          echo "❌ Release ${{ github.ref_name }} failed to publish"
+          echo "Check the workflow logs for details"
+          exit 1
