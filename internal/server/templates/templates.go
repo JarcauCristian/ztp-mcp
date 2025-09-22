@@ -21,14 +21,14 @@ func Templates() ([]Description, error) {
 
 	currentDir, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("Error getting working directory.")
+		return nil, fmt.Errorf("error getting working directory")
 	}
 
 	templatesDir := filepath.Join(currentDir, "internal/server/templates")
 
 	entries, err := os.ReadDir(templatesDir)
 	if err != nil {
-		zap.L().Error("Error reading base_dir")
+		zap.L().Error("error reading base_dir")
 		return nil, fmt.Errorf("error reading directory %s: %w", templatesDir, err)
 	}
 
@@ -45,14 +45,14 @@ func Templates() ([]Description, error) {
 
 		fileData, err := os.ReadFile(descriptionPath)
 		if err != nil {
-			zap.L().Error(fmt.Sprintf("Error reading %s: %v\n", descriptionPath, err))
+			zap.L().Error(fmt.Sprintf("error reading %s: %v\n", descriptionPath, err))
 			continue
 		}
 
 		var description Description
 
 		if err := json.Unmarshal(fileData, &description); err != nil {
-			zap.L().Error(fmt.Sprintf("Error parsing JSON from %s: %v\n", descriptionPath, err))
+			zap.L().Error(fmt.Sprintf("error parsing JSON from %s: %v\n", descriptionPath, err))
 			continue
 		}
 
@@ -65,7 +65,7 @@ func Templates() ([]Description, error) {
 func Template(templateId string) (Description, error) {
 	currentDir, err := os.Getwd()
 	if err != nil {
-		return Description{}, fmt.Errorf("Error getting working directory.")
+		return Description{}, fmt.Errorf("error getting working directory")
 	}
 
 	templatesDir := filepath.Join(currentDir, "internal/server/templates")
@@ -78,14 +78,14 @@ func Template(templateId string) (Description, error) {
 
 	fileData, err := os.ReadFile(descriptionPath)
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("Error reading %s: %v\n", descriptionPath, err))
+		zap.L().Error(fmt.Sprintf("error reading %s: %v\n", descriptionPath, err))
 		return Description{}, err
 	}
 
 	var description Description
 
 	if err := json.Unmarshal(fileData, &description); err != nil {
-		zap.L().Error(fmt.Sprintf("Error parsing JSON from %s: %v\n", descriptionPath, err))
+		zap.L().Error(fmt.Sprintf("error parsing JSON from %s: %v\n", descriptionPath, err))
 		return description, err
 	}
 
@@ -97,7 +97,7 @@ func TemplateIDs() ([]string, error) {
 
 	currentDir, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("Error getting working directory.")
+		return nil, fmt.Errorf("error getting working directory")
 	}
 
 	templatesDir := filepath.Join(currentDir, "internal/server/templates")
@@ -120,14 +120,14 @@ func TemplateIDs() ([]string, error) {
 
 		fileData, err := os.ReadFile(descriptionPath)
 		if err != nil {
-			zap.L().Error(fmt.Sprintf("Error reading %s: %v\n", descriptionPath, err))
+			zap.L().Error(fmt.Sprintf("error reading %s: %v\n", descriptionPath, err))
 			continue
 		}
 
 		var description Description
 
 		if err := json.Unmarshal(fileData, &description); err != nil {
-			zap.L().Error(fmt.Sprintf("Error parsing JSON from %s: %v\n", descriptionPath, err))
+			zap.L().Error(fmt.Sprintf("error parsing JSON from %s: %v\n", descriptionPath, err))
 			continue
 		}
 
@@ -140,7 +140,7 @@ func TemplateIDs() ([]string, error) {
 func TemplateContent(templateId string) (string, error) {
 	currentDir, err := os.Getwd()
 	if err != nil {
-		return "", fmt.Errorf("Error getting working directory.")
+		return "", fmt.Errorf("error getting working directory")
 	}
 
 	templatesDir := filepath.Join(currentDir, "internal/server/templates")
@@ -153,7 +153,7 @@ func TemplateContent(templateId string) (string, error) {
 
 	templateContentData, err := os.ReadFile(templateContentPath)
 	if err != nil {
-		zap.L().Error(fmt.Sprintf("Error reading %s: %v\n", templateContentPath, err))
+		zap.L().Error(fmt.Sprintf("error reading %s: %v\n", templateContentPath, err))
 		return "", err
 	}
 

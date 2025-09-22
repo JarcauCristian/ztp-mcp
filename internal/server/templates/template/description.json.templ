@@ -1,0 +1,10 @@
+{
+  "id": "{{ .Id }}",
+  "name": "{{ .Name }}",
+  "description": "{{ .Description }}",
+  "parameters": {
+    {{- range $index, $param := .Parameters }}
+      "{{ $param.Name | ToLower }}": "{{ $param.Description }}"{{if ne $index (sub (len $.Parameters) 1)}},{{end}}
+    {{- end }}
+  }
+}

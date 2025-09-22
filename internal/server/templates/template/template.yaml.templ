@@ -1,0 +1,27 @@
+#cloud-config
+
+package_update: {{ .UpdatePackages }}
+package_upgrade: {{ .UpgradePackages }}
+
+packages: {{- if .Packages }}
+{{- range .Packages }}
+  - {{ . }}
+{{- end }}
+{{- else }} []
+{{- end }}
+
+write_files:{{- if .Files }}
+{{- range .Files }}
+  - path: {{ .Path }}
+    content: |
+      {{ .Content }}
+{{- end }}
+{{- else }} []
+{{- end }}
+
+runcmd: {{- if .Commands }}
+{{- range .Commands }}
+  - {{ . }}
+{{- end }}
+{{- else }} []
+{{- end }}
