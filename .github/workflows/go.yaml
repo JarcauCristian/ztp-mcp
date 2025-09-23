@@ -5,7 +5,7 @@ on:
     branches: ['*']
     tags: ['v*']
   pull_request:
-    branches: ['main', 'master']
+    branches: ['main']
 
 permissions:
   contents: write
@@ -41,6 +41,13 @@ jobs:
 
       - name: Run go vet
         run: go vet ./...
+
+      - name: Run staticcheck
+        uses: dominikh/staticcheck-action@v1.2.0
+        with:
+          version: "2022.1.1"
+          install-go: false
+          cache-key: "1.23.x"
 
   test:
     name: Run Tests
