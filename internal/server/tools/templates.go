@@ -193,7 +193,7 @@ type DeleteTemplate struct{}
 
 func (DeleteTemplate) Create() mcp.Tool {
 	return mcp.NewTool(
-		"remove_template",
+		"delete_template",
 		mcp.WithString(
 			"id",
 			mcp.Required(),
