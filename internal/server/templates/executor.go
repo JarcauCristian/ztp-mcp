@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -49,7 +48,7 @@ func (t *TemplateExecutor) Execute() (string, error) {
 	return encodedStr, nil
 }
 
-func RetrieveExecutor(templateId string, body io.ReadCloser) (*TemplateExecutor, error) {
+func RetrieveExecutor(templateId string, parameters string) (*TemplateExecutor, error) {
 	currentDir, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current working directory: %w", err)
@@ -72,7 +71,7 @@ func RetrieveExecutor(templateId string, body io.ReadCloser) (*TemplateExecutor,
 	}
 
 	var params map[string]any
-	if err := json.NewDecoder(body).Decode(&params); err != nil {
+	if err := json.Unmarshal([]byte(parameters), &params); err != nil {
 		return nil, fmt.Errorf("failed to parse body: %v", err)
 	}
 
