@@ -9,7 +9,6 @@ import (
 
 	"github.com/JarcauCristian/ztp-mcp/internal/server/maas_client"
 	"github.com/JarcauCristian/ztp-mcp/internal/server/parser"
-	"github.com/JarcauCristian/ztp-mcp/internal/server/template"
 	"github.com/JarcauCristian/ztp-mcp/internal/server/templates"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
