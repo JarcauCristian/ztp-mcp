@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime/debug"
 
 	"github.com/JarcauCristian/ztp-mcp/internal/server/registry"
 	"github.com/JarcauCristian/ztp-mcp/internal/server/tools"
@@ -17,6 +18,10 @@ func init() {
 	var logger *zap.Logger
 
 	config := zap.NewDevelopmentConfig()
+
+	config.DisableCaller = false
+	config.EncoderConfig.CallerKey = "caller"
+	config.EncoderConfig.FunctionKey = "function"
 	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	config.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("15:04:05")
 	config.EncoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
@@ -34,9 +39,18 @@ func registerTools(mcpServer *server.MCPServer) {
 }
 
 func main() {
+	var version string
+	info, ok := debug.ReadBuildInfo()
+
+	if !ok {
+		version = "0.1.0"
+	} else {
+		version = info.Main.Version
+	}
+
 	mcpServer := server.NewMCPServer(
 		"Zero-Touch Provisioning MPC Server",
-		"0.1.0",
+		version,
 		server.WithInstructions("This server is used to communicate with the ZTP agent in order to deploy, interact and retrieve the status of machines inside an Ubuntu MAAS instance."),
 		server.WithToolCapabilities(true),
 		server.WithResourceCapabilities(true, true),
