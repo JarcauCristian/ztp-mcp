@@ -52,5 +52,6 @@ func Logging(next http.Handler) http.Handler {
 func Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		zap.L().Info(r.URL.Path)
+		next.ServeHTTP(w, r)
 	})
 }

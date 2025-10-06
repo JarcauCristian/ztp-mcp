@@ -71,7 +71,7 @@ func main() {
 
 		mux := http.NewServeMux()
 
-		mux.Handle("/mux", server.NewStreamableHTTPServer(mcpServer))
+		mux.Handle("/mcp", server.NewStreamableHTTPServer(mcpServer))
 		handler := middleware.Logging(middleware.Auth(mux))
 
 		if err := http.ListenAndServe(addr, handler); err != nil {
