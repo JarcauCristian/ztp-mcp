@@ -71,7 +71,7 @@ func (ListMachines) Handle(ctx context.Context, request mcp.CallToolRequest) (*m
 	client := maas_client.MustClient()
 
 	zap.L().Info("[ListMachines] Retrieving all the machines...")
-	resultData, err := client.Get(ctx, path)
+	resultData, err := client.Do(ctx, maas_client.RequestTypeGet, path, nil)
 	if err != nil {
 		errMsg = fmt.Sprintf("Failed to retrieve all the machines: %v", err)
 		zap.L().Error(fmt.Sprintf("[ListMachines] %s", errMsg))
@@ -135,7 +135,7 @@ func (ListMachine) Handle(ctx context.Context, request mcp.CallToolRequest) (*mc
 	client := maas_client.MustClient()
 
 	zap.L().Info(fmt.Sprintf("[ListMachine] Retrieving machine with id %s...", machineID))
-	resultData, err := client.Get(ctx, path)
+	resultData, err := client.Do(ctx, maas_client.RequestTypeGet, path, nil)
 	if err != nil {
 		errMsg = fmt.Sprintf("Failed to retrieve the machine with id %s err=%v", machineID, err)
 		zap.L().Error(fmt.Sprintf("[ListMachine] %s", errMsg))
@@ -194,7 +194,7 @@ func (CommissionMachine) Handle(ctx context.Context, request mcp.CallToolRequest
 	form.Add("enable_ssh", "1")
 
 	zap.L().Info(fmt.Sprintf("[CommissionMachine] Commissioning machine with id %s...", machineID))
-	resultData, err := client.Post(ctx, path, strings.NewReader(form.Encode()))
+	resultData, err := client.Do(ctx, maas_client.RequestTypePost, path, strings.NewReader(form.Encode()))
 	if err != nil {
 		errMsg = fmt.Sprintf("Failed to commission the machine with id %s err=%v", machineID, err)
 		zap.L().Error(fmt.Sprintf("[CommissionMachine] %s", errMsg))
@@ -279,7 +279,7 @@ func (DeployMachine) Handle(ctx context.Context, request mcp.CallToolRequest) (*
 	form.Add("user_data", userData)
 
 	zap.L().Info(fmt.Sprintf("[DeployMachine] Deploying machine with id %s and template %s...", machineId, templateId))
-	resultData, err := client.Post(ctx, path, strings.NewReader(form.Encode()))
+	resultData, err := client.Do(ctx, maas_client.RequestTypePost, path, strings.NewReader(form.Encode()))
 	if err != nil {
 		errMsg = fmt.Sprintf("Failed to deploy the machine with id %s err=%v", machineId, err)
 		zap.L().Error(fmt.Sprintf("[DeployMachine] %s", errMsg))

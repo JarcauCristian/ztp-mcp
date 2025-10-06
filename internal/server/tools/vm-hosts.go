@@ -42,7 +42,7 @@ func (ListVMHosts) Handle(ctx context.Context, request mcp.CallToolRequest) (*mc
 	client := maas_client.MustClient()
 
 	zap.L().Info("[ListVMHosts] Retrieving all VM hosts...")
-	resultData, err := client.Get(ctx, path)
+	resultData, err := client.Do(ctx, maas_client.RequestTypeGet, path, nil)
 	if err != nil {
 		errMsg = fmt.Sprintf("Failed to retrieve the VM hosts: %v", err)
 		zap.L().Error(fmt.Sprintf("[ListVMHosts] %s", errMsg))
@@ -88,7 +88,7 @@ func (ListVMHost) Handle(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	client := maas_client.MustClient()
 
 	zap.L().Info(fmt.Sprintf("[ListVMHost] Retrieving VM host with ID %s...", vmID))
-	resultData, err := client.Get(ctx, path)
+	resultData, err := client.Do(ctx, maas_client.RequestTypeGet, path, nil)
 	if err != nil {
 		errMsg = fmt.Sprintf("Failed to retreive VM host with ID %s, err=%v", vmID, err)
 		zap.L().Error(fmt.Sprintf("[ListVMHost] %s", errMsg))
@@ -188,7 +188,7 @@ func (ComposeVM) Handle(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 	client := maas_client.MustClient()
 
 	zap.L().Info(fmt.Sprintf("[ComposeVM] Composing VM on host %s with the following configuration:\nCores: %s\nMemory: %s\nStorage: %s\nHostname: %s", vmHostID, cores, memory, storage, hostname))
-	resultData, err := client.Post(ctx, path, strings.NewReader(form.Encode()))
+	resultData, err := client.Do(ctx, maas_client.RequestTypePost, path, strings.NewReader(form.Encode()))
 	if err != nil {
 		errMsg = fmt.Sprintf("Failed to compose VM err=%v", err)
 		zap.L().Error(fmt.Sprintf("[ComposeVM] %s", errMsg))

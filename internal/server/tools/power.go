@@ -50,7 +50,7 @@ func (PowerState) Handle(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	client := maas_client.MustClient()
 
 	zap.L().Info(fmt.Sprintf("[PowerState] Retrieving power state for machine with id %s...", machineID))
-	resultData, err := client.Get(ctx, path)
+	resultData, err := client.Do(ctx, maas_client.RequestTypeGet, path, nil)
 	if err != nil {
 		errMsg = fmt.Sprintf("Failed to retrieve power state for machine with id %s err=%v", machineID, err)
 		zap.L().Error(fmt.Sprintf("[PowerState] %s", errMsg))
@@ -119,7 +119,7 @@ func (ChangePowerState) Handle(ctx context.Context, request mcp.CallToolRequest)
 	}
 
 	zap.L().Info(fmt.Sprintf("[ChangePowerState] Power machine with id %s %s...", machineID, powerName))
-	resultData, err := client.Get(ctx, path)
+	resultData, err := client.Do(ctx, maas_client.RequestTypeGet, path, nil)
 	if err != nil {
 		errMsg = fmt.Sprintf("Failed to power %s machine with id %s err=%v", powerName, machineID, err)
 		zap.L().Error(fmt.Sprintf("[ChangePowerState] %s", errMsg))

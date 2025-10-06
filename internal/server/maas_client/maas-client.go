@@ -21,6 +21,41 @@ var (
 	initErr       error
 )
 
+type RequestType int
+
+const (
+	RequestTypeGet RequestType = iota
+	RequestTypePost
+	RequestTypePut
+	RequestTypeDelete
+)
+
+var requestTypeName = map[RequestType]string{
+	RequestTypeGet:    "GET",
+	RequestTypePost:   "POST",
+	RequestTypePut:    "PUT",
+	RequestTypeDelete: "DELETE",
+}
+
+func (rt RequestType) String() string {
+	return requestTypeName[rt]
+}
+
+func (rt RequestType) Headers() map[string]string {
+	switch rt {
+	case RequestTypeGet:
+		return nil
+	case RequestTypePost:
+		return map[string]string{"Content-Type": "application/x-www-form-urlencoded"}
+	case RequestTypePut:
+		return map[string]string{"Content-Type": "application/x-www-form-urlencoded"}
+	case RequestTypeDelete:
+		return map[string]string{"Content-Type": "application/x-www-form-urlencoded"}
+	default:
+		return nil
+	}
+}
+
 func GetClient() (*MAASClient, error) {
 	once.Do(func() {
 		defaultClient, initErr = NewMAASClientFromEnv()
@@ -77,60 +112,13 @@ func NewMAASClientFromEnv() (*MAASClient, error) {
 	}, nil
 }
 
-func (c *MAASClient) Get(ctx context.Context, path string) (string, error) {
-	fullURL := fmt.Sprintf("%s%s", c.baseURL, path)
-
-	req, err := http.NewRequestWithContext(ctx, "GET", fullURL, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-
-	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
-
-	nonce, err := generateNonce()
-	if err != nil {
-		return "", err
-	}
-
-	signature := "&" + url.QueryEscape(c.secret)
-
-	authHeader := fmt.Sprintf(
-		`OAuth oauth_version="1.0", oauth_signature_method="PLAINTEXT", oauth_consumer_key="%s", oauth_token="%s", oauth_signature="%s", oauth_nonce="%s", oauth_timestamp="%s"`,
-		url.QueryEscape(c.consumerKey),
-		url.QueryEscape(c.token),
-		url.QueryEscape(signature),
-		nonce,
-		timestamp,
-	)
-
-	req.Header.Set("Authorization", authHeader)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("MAAS API error: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read the response: %w", err)
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("MAAS API returned status %d: %s", resp.StatusCode, string(body))
-	}
-
-	return string(body), nil
-}
-
-func (c *MAASClient) Post(ctx context.Context, path string, body io.Reader) (string, error) {
+func (c *MAASClient) Do(ctx context.Context, requestType RequestType, path string, body io.Reader) (string, error) {
 	fullURL := fmt.Sprintf("%s%s", c.baseURL, path)
 
 	timeoutContext, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(timeoutContext, "POST", fullURL, body)
+	req, err := http.NewRequestWithContext(timeoutContext, requestType.String(), fullURL, body)
 	if err != nil {
 		return "", fmt.Errorf("failed to create request: %w", err)
 	}
@@ -154,7 +142,12 @@ func (c *MAASClient) Post(ctx context.Context, path string, body io.Reader) (str
 	)
 
 	req.Header.Set("Authorization", authHeader)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	if requestType.Headers() != nil {
+		for key, value := range requestType.Headers() {
+			req.Header.Set(key, value)
+		}
+	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
