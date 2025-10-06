@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"net/http"
 	"os"
 	"runtime/debug"
 
+	"github.com/JarcauCristian/ztp-mcp/internal/server/middleware"
 	"github.com/JarcauCristian/ztp-mcp/internal/server/registry"
 	"github.com/JarcauCristian/ztp-mcp/internal/server/tools"
 	"go.uber.org/zap"
@@ -20,8 +21,6 @@ func init() {
 	config := zap.NewDevelopmentConfig()
 
 	config.DisableCaller = false
-	config.EncoderConfig.CallerKey = "caller"
-	config.EncoderConfig.FunctionKey = "function"
 	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	config.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("15:04:05")
 	config.EncoderConfig.EncodeCaller = zapcore.ShortCallerEncoder
@@ -65,13 +64,18 @@ func main() {
 		zap.L().Info("Starting MCP server in SSE mode...")
 		sseServer := server.NewSSEServer(mcpServer)
 		if err := sseServer.Start(addr); err != nil {
-			log.Fatal(err)
+			zap.L().Fatal(err.Error())
 		}
 	case "HTTP", "http":
 		zap.L().Info(fmt.Sprintf("Starting MCP server in Streamable HTTP mode on %s...", addr))
-		httpServer := server.NewStreamableHTTPServer(mcpServer)
-		if err := httpServer.Start(addr); err != nil {
-			log.Fatal(err)
+
+		mux := http.NewServeMux()
+
+		mux.Handle("/mux", server.NewStreamableHTTPServer(mcpServer))
+		handler := middleware.Logging(middleware.Auth(mux))
+
+		if err := http.ListenAndServe(addr, handler); err != nil {
+			zap.L().Fatal(err.Error())
 		}
 	default:
 		zap.L().Info("Starting MCP server in stdio mode...")
