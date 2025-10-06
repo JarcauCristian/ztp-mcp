@@ -10,12 +10,19 @@ import (
 	"github.com/JarcauCristian/ztp-mcp/internal/server/maas_client"
 	"github.com/JarcauCristian/ztp-mcp/internal/server/tools"
 	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 	"go.uber.org/zap"
 )
 
 type Tag struct{}
 
-func (Tag) Register() {}
+func (Tag) Register(mcpServer *server.MCPServer) {
+	mcpTools := []tools.MCPTool{DeleteTag{}, ReadTag{}, UpdateTag{}, ListByTag{}}
+
+	for _, tool := range mcpTools {
+		mcpServer.AddTool(tool.Create(), tool.Handle)
+	}
+}
 
 type DeleteTag struct{}
 
