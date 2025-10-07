@@ -9,6 +9,10 @@ import (
 	"github.com/JarcauCristian/ztp-mcp/internal/server/middleware"
 	"github.com/JarcauCristian/ztp-mcp/internal/server/registry"
 	"github.com/JarcauCristian/ztp-mcp/internal/server/tools"
+	"github.com/JarcauCristian/ztp-mcp/internal/server/tools/fabrics"
+	"github.com/JarcauCristian/ztp-mcp/internal/server/tools/subnets"
+	"github.com/JarcauCristian/ztp-mcp/internal/server/tools/tags"
+	"github.com/JarcauCristian/ztp-mcp/internal/server/tools/vlans"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -30,7 +34,20 @@ func init() {
 }
 
 func registerTools(mcpServer *server.MCPServer) {
-	registries := []registry.Registry{tools.VMHosts{}, tools.Machines{}, tools.Power{}, tools.Templates{}}
+	registries := []registry.Registry{
+		tools.VMHosts{},
+		tools.Machines{},
+		tools.Power{},
+		tools.Templates{},
+		tags.Tags{},
+		tags.Tag{},
+		subnets.Subnets{},
+		subnets.Subnet{},
+		fabrics.Fabrics{},
+		fabrics.Fabric{},
+		vlans.Vlans{},
+		vlans.Vlan{},
+	}
 
 	for _, reg := range registries {
 		reg.Register(mcpServer)
