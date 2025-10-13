@@ -29,6 +29,7 @@ type ListFabrics struct{}
 func (ListFabrics) Create() mcp.Tool {
 	return mcp.NewTool(
 		"list_fabrics",
+		mcp.WithInputSchema[struct{}](),
 		mcp.WithToolAnnotation(tools.CreateToolAnnotation("List Fabrics", true, false, false, true)),
 		mcp.WithDescription("This tool is used to return all the fabrics that are currently defined on the running instance of MAAS."),
 	)

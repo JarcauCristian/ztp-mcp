@@ -3,8 +3,10 @@ package middleware
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -51,7 +53,18 @@ func Logging(next http.Handler) http.Handler {
 
 func Auth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		zap.L().Info(r.URL.Path)
+		bodyBytes, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "Failed to read body", http.StatusInternalServerError)
+			return
+		}
+
+		r.Body.Close()
+
+		r.Body = io.NopCloser(strings.NewReader(string(bodyBytes)))
+
+		zap.L().Info(string(bodyBytes))
+
 		next.ServeHTTP(w, r)
 	})
 }

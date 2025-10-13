@@ -29,6 +29,7 @@ type ListTags struct{}
 func (ListTags) Create() mcp.Tool {
 	return mcp.NewTool(
 		"read_tags",
+		mcp.WithInputSchema[struct{}](),
 		mcp.WithToolAnnotation(tools.CreateToolAnnotation("List Tags", true, false, false, true)),
 		mcp.WithDescription("This tools is used to return all the tags that are currently defined on the running instance of MAAS."),
 	)
